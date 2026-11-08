@@ -1609,6 +1609,20 @@ export function persistNativeExpandedToolSourceIds(sessionId: string, sourceIds:
     saveChatSessions(next);
 }
 
+/** 清理 MCP 输入 schema 中不属于 JSON Schema 的运行时元数据，避免污染原生工具声明。 */
+function sanitizeNativeToolSchema(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(sanitizeNativeToolSchema);
+    if (value !== null && typeof value === "object") {
+        const result: Record<string, unknown> = {};
+        for (const [key, item] of Object.entries(value)) {
+            if (key === "returnDirect") continue;
+            result[key] = sanitizeNativeToolSchema(item);
+        }
+        return result;
+    }
+    return value;
+}
+
 function parseNativeToolSchema(displayName: string, schemaSource: unknown): Record<string, unknown> {
     const parsed = typeof schemaSource === "string"
         ? JSON.parse(schemaSource || "{}") as unknown
@@ -1616,7 +1630,7 @@ function parseNativeToolSchema(displayName: string, schemaSource: unknown): Reco
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         throw new ChatEngineError(`动作「${displayName}」的参数 schema 必须是 JSON object。`);
     }
-    const schema = parsed as Record<string, unknown>;
+    const schema = sanitizeNativeToolSchema(parsed) as Record<string, unknown>;
     return schema.type ? schema : { type: "object", ...schema };
 }
 
