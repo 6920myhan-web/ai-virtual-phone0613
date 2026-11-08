@@ -683,7 +683,7 @@ function buildGeminiRequest(
             functionDeclarations: options.tools.map((tool) => ({
                 name: tool.name,
                 description: tool.description,
-                parameters: stringifyToolSchemaEnums(sanitizeGeminiToolSchema(tool.parameters)),
+                parameters: sanitizeGeminiToolSchema(stringifyToolSchemaEnums(sanitizeGeminiToolSchema(tool.parameters))),
             })),
         }];
     }
