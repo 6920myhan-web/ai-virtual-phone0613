@@ -629,6 +629,20 @@ function anthropicContentBlocks(message: LlmRequestMessage): unknown[] {
     return anthropicContentFromParts(message.content);
 }
 
+/** 清理 Gemini Function Declaration 不支持的 MCP 元数据字段。 */
+function sanitizeGeminiToolSchema(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(sanitizeGeminiToolSchema);
+    if (value !== null && typeof value === "object") {
+        const result: Record<string, unknown> = {};
+        for (const [key, item] of Object.entries(value)) {
+            if (key === "returnDirect") continue;
+            result[key] = sanitizeGeminiToolSchema(item);
+        }
+        return result;
+    }
+    return value;
+}
+
 function buildGeminiRequest(
     config: ApiConfig,
     preset: PresetConfig | null,
@@ -669,7 +683,7 @@ function buildGeminiRequest(
             functionDeclarations: options.tools.map((tool) => ({
                 name: tool.name,
                 description: tool.description,
-                parameters: stringifyToolSchemaEnums(tool.parameters),
+                parameters: stringifyToolSchemaEnums(sanitizeGeminiToolSchema(tool.parameters)),
             })),
         }];
     }
